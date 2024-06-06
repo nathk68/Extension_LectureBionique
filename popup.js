@@ -3,4 +3,3 @@ document.getElementById('applyBionic').addEventListener('click', () => {
       chrome.tabs.sendMessage(tabs[0].id, { action: "applyBionicReading" });
     });
   });
-  

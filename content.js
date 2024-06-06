@@ -10,20 +10,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!selection.rangeCount) return;
   
     const range = selection.getRangeAt(0);
-    const selectedText = range.toString();
+    const documentFragment = range.cloneContents();
+    const nodes = documentFragment.childNodes;
   
+    // Function to apply bionic reading to text
     const bionicReading = (text) => {
       return text.split(' ').map(word => {
-        if (word.length > 3) {
-          return `<b>${word.substring(0, 3)}</b>${word.substring(3)}`;
+        let boldLength;
+        if (word.length <= 3) {
+          boldLength = 1;
+        } else if (word.length === 4) {
+          boldLength = 2;
+        } else if (word.length <= 6) {
+          boldLength = 3;
+        } else if (word.length <= 8) {
+          boldLength = 4;
+        } else {
+          boldLength = 5;
         }
-        return `<b>${word}</b>`;
+        return `<b>${word.substring(0, boldLength)}</b>${word.substring(boldLength)}`;
       }).join(' ');
     };
   
-    const span = document.createElement('span');
-    span.innerHTML = bionicReading(selectedText);
+    // Function to recursively process each node
+    function processNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const span = document.createElement('span');
+        span.innerHTML = bionicReading(node.textContent);
+        return span;
+      } else {
+        const newNode = node.cloneNode(false);
+        node.childNodes.forEach(child => {
+          newNode.appendChild(processNode(child));
+        });
+        return newNode;
+      }
+    }
+  
+    // Create a document fragment to hold the new nodes
+    const fragment = document.createDocumentFragment();
+  
+    // Process each node in the selection
+    nodes.forEach(node => {
+      fragment.appendChild(processNode(node));
+    });
+  
+    // Replace the selected range with the new fragment
     range.deleteContents();
-    range.insertNode(span);
+    range.insertNode(fragment);
   }
   
